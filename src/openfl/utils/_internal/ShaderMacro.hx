@@ -4,6 +4,7 @@ package openfl.utils._internal;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Type;
+import sys.io.File;
 
 using haxe.macro.ExprTools;
 using haxe.macro.Tools;
@@ -20,114 +21,160 @@ class ShaderMacro
 	{
 		var fields = Context.getBuildFields();
 
-		var glFragmentHeader = "";
-		var glFragmentBody = "";
-		var glVertexHeader = "";
-		var glVertexBody = "";
+		var constructor = null;
+		var shouldProcess = false;
+		var version = null;
 
-		var glFragmentSource:String = null;
-		var glVertexSource:String = null;
-
+		// Determine if we need to process this class
 		for (field in fields)
 		{
 			for (meta in field.meta)
 			{
-				switch (meta.name)
+				if (!shouldProcess && (StringTools.startsWith(meta.name, ":gl") || StringTools.startsWith(meta.name, "gl")))
 				{
-					case "glFragmentSource", ":glFragmentSource":
-						glFragmentSource = meta.params[0].getValue();
-
-					case "glVertexSource", ":glVertexSource":
-						glVertexSource = meta.params[0].getValue();
-
-					case "glFragmentHeader", ":glFragmentHeader":
-						glFragmentHeader = meta.params[0].getValue();
-
-					case "glFragmentBody", ":glFragmentBody":
-						glFragmentBody = meta.params[0].getValue();
-
-					case "glVertexHeader", ":glVertexHeader":
-						glVertexHeader = meta.params[0].getValue();
-
-					case "glVertexBody", ":glVertexBody":
-						glVertexBody = meta.params[0].getValue();
-
-					default:
+					shouldProcess = true;
 				}
+
+				if (meta.name == ":glVersion" || meta.name == "glVersion")
+				{
+					version = meta.params[0].getValue();
+				}
+			}
+
+			if (field.name == "new")
+			{
+				constructor = field;
 			}
 		}
 
-		var pos = Context.currentPos();
-		var localClass = Context.getLocalClass().get();
-		var superClass = localClass.superClass != null ? localClass.superClass.t.get() : null;
-		var parent = superClass;
-		var parentFields:Array<ClassField>;
-
-		while (parent != null)
+		// Parse meta values into a private GLSLSourceAssembler instance to
+		// compile header, body and sources into combined sources
+		if (shouldProcess)
 		{
-			parentFields = [parent.constructor.get()].concat(parent.fields.get());
+			var pos = Context.currentPos();
+			var code = [];
+			var sources = "";
 
-			for (field in parentFields)
+			code.push(Context.parse("__isGenerated = true", pos));
+			code.push(Context.parse("var __assembler = new openfl.utils.GLSLSourceAssembler()", pos));
+
+			var value, require;
+
+			for (field in fields)
 			{
-				for (meta in field.meta.get())
+				for (meta in field.meta)
 				{
+					value = null;
+
 					switch (meta.name)
 					{
-						case "glFragmentSource", ":glFragmentSource":
-							if (glFragmentSource == null) glFragmentSource = meta.params[0].getValue();
+						case ":glVertexHeader", "glVertexHeader":
+							value = __processValue(meta, version, true);
+							code.push(macro __assembler.addVertexHeader($v{value}));
 
-						case "glVertexSource", ":glVertexSource":
-							if (glVertexSource == null) glVertexSource = meta.params[0].getValue();
+						case ":glVertexBody", "glVertexBody":
+							value = __processValue(meta, version, true);
+							code.push(macro __assembler.addVertexBody($v{value}));
 
-						case "glFragmentHeader", ":glFragmentHeader":
-							glFragmentHeader = meta.params[0].getValue() + "\n" + glFragmentHeader;
+						case ":glVertexSource", "glVertexSource":
+							value = __processValue(meta, version, true);
+							code.push(macro __assembler.vertexSource = $v{value});
 
-						case "glFragmentBody", ":glFragmentBody":
-							glFragmentBody = meta.params[0].getValue() + "\n" + glFragmentBody;
+						case ":glVertexSourceFile", "glVertexSourceFile":
+							value = __getFileContent(__processValue(meta, version, true));
+							code.push(macro __assembler.vertexSource = $v{value});
 
-						case "glVertexHeader", ":glVertexHeader":
-							glVertexHeader = meta.params[0].getValue() + "\n" + glVertexHeader;
+						case ":glFragmentHeader", "glFragmentHeader":
+							value = __processValue(meta, version, false);
+							code.push(macro __assembler.addFragmentHeader($v{value}));
 
-						case "glVertexBody", ":glVertexBody":
-							glVertexBody = meta.params[0].getValue() + "\n" + glVertexBody;
+						case ":glFragmentBody", "glFragmentBody":
+							value = __processValue(meta, version, false);
+							code.push(macro __assembler.addFragmentBody($v{value}));
+
+						case ":glFragmentSource", "glFragmentSource":
+							value = __processValue(meta, version, false);
+							code.push(macro __assembler.fragmentSource = $v{value});
+
+						case ":glFragmentSourceFile", "glFragmentSourceFile":
+							value = __getFileContent(__processValue(meta, version, false));
+							code.push(macro __assembler.fragmentSource = $v{value});
+
+						case ":glExtension", "glExtension":
+							value = meta.params[0].getValue();
+							require = __getBool(meta, 1, true);
+							code.push(macro __assembler.addExtension($v{value}, $v{require}));
+
+						case ":glVertexExtension", "glVertexExtension":
+							value = meta.params[0].getValue();
+							require = __getBool(meta, 1, true);
+							code.push(macro __assembler.addVertexExtension($v{value}, $v{require}));
+
+						case ":glFragmentExtension", "glFragmentExtension":
+							value = meta.params[0].getValue();
+							require = __getBool(meta, 1, true);
+							code.push(macro __assembler.addFragmentExtension($v{value}, $v{require}));
 
 						default:
+					}
+
+					if (value != null)
+					{
+						sources += value + "\n";
 					}
 				}
 			}
 
-			parent = parent.superClass != null ? parent.superClass.t.get() : null;
-		}
+			// Inheritance is working in reverse -- sub-class assembler is defined *after* the parent class
+			code.push(macro
+				{
+					if (__glSourceAssembler != null)
+					{
+						__assembler.concat(__glSourceAssembler);
+					}
+					__glSourceAssembler = __assembler;
+					__glVertexSource = __glSourceAssembler.assembleVertexSource();
+					__glFragmentSource = __glSourceAssembler.assembleFragmentSource();
+				});
 
-		if (glVertexSource != null || glFragmentSource != null)
-		{
-			if (glFragmentSource != null && glFragmentHeader != null && glFragmentBody != null)
+			var block = switch (constructor.kind)
 			{
-				glFragmentSource = StringTools.replace(glFragmentSource, "#pragma header", glFragmentHeader);
-				glFragmentSource = StringTools.replace(glFragmentSource, "#pragma body", glFragmentBody);
+				case FFun(f):
+					if (f.expr == null) null;
+					switch (f.expr.expr)
+					{
+						case EBlock(e): e;
+						default: null;
+					}
+				default: null;
 			}
 
-			if (glVertexSource != null && glVertexHeader != null && glVertexBody != null)
+			// Concat code to beginning of new() block, before super()
+			for (i in 0...code.length)
 			{
-				glVertexSource = StringTools.replace(glVertexSource, "#pragma header", glVertexHeader);
-				glVertexSource = StringTools.replace(glVertexSource, "#pragma body", glVertexBody);
+				block.unshift(code[code.length - i - 1]);
 			}
 
+			block.push(Context.parse("__initGL ()", pos));
+
+			// Add new fields for properties found within sources
 			var shaderDataFields:Array<Field> = [];
 			var uniqueFields:Array<Field> = [];
 
-			processFields(glVertexSource, "attribute", shaderDataFields, pos);
-			processFields(glVertexSource, "uniform", shaderDataFields, pos);
-			processFields(glFragmentSource, "uniform", shaderDataFields, pos);
+			__processFields(sources, "attribute", shaderDataFields, pos);
+			__processFields(sources, "in", shaderDataFields, pos); // For higher GLSL versions
+			__processFields(sources, "uniform", shaderDataFields, pos);
 
 			if (shaderDataFields.length > 0)
 			{
 				var fieldNames = new Map<String, Bool>();
+				var localClass = Context.getLocalClass().get();
+				var superClass = localClass.superClass != null ? localClass.superClass.t.get() : null;
+				var parent;
 
 				for (field in shaderDataFields)
 				{
 					parent = superClass;
-
 					while (parent != null)
 					{
 						for (parentField in parent.fields.get())
@@ -137,62 +184,15 @@ class ShaderMacro
 								fieldNames.set(field.name, true);
 							}
 						}
-
 						parent = parent.superClass != null ? parent.superClass.t.get() : null;
 					}
-
 					if (!fieldNames.exists(field.name))
 					{
 						uniqueFields.push(field);
 					}
-
 					fieldNames[field.name] = true;
 				}
 			}
-
-			// #if !display
-			for (field in fields)
-			{
-				switch (field.name)
-				{
-					case "new":
-						var block = switch (field.kind)
-						{
-							case FFun(f):
-								if (f.expr == null) null;
-
-								switch (f.expr.expr)
-								{
-									case EBlock(e): e;
-									default: null;
-								}
-
-							default: null;
-						}
-
-						if (glVertexSource != null)
-						{
-							block.unshift(macro if (__glVertexSource == null)
-							{
-								__glVertexSource = $v{glVertexSource};
-							});
-						}
-
-						if (glFragmentSource != null)
-						{
-							block.unshift(macro if (__glFragmentSource == null)
-							{
-								__glFragmentSource = $v{glFragmentSource};
-							});
-						}
-
-						block.push(Context.parse("__isGenerated = true", pos));
-						block.push(Context.parse("__initGL ()", pos));
-
-					default:
-				}
-			}
-			// #end
 
 			fields = fields.concat(uniqueFields);
 		}
@@ -200,7 +200,31 @@ class ShaderMacro
 		return fields;
 	}
 
-	private static function processFields(source:String, storageType:String, fields:Array<Field>, pos:Position):Void
+	private static function __getBool(meta:MetadataEntry, argIndex:Int = 1, defaultValue:Bool = true):Bool
+	{
+		if (meta.params.length > argIndex)
+		{
+			return cast(meta.params[argIndex].getValue(), Bool);
+		}
+
+		return defaultValue;
+	}
+
+	private static function __getFileContent(path:String):String
+	{
+		var source = null;
+		try
+		{
+			source = File.getContent(path);
+		}
+		catch (e:Dynamic)
+		{
+			Context.fatalError('Cannot load shader from file: ${e}', Context.currentPos());
+		}
+		return source;
+	}
+
+	private static function __processFields(source:String, storageType:String, fields:Array<Field>, pos:Position):Void
 	{
 		if (source == null) return;
 
@@ -209,6 +233,10 @@ class ShaderMacro
 		if (storageType == "uniform")
 		{
 			regex = ~/uniform ([A-Za-z0-9]+) ([A-Za-z0-9_]+)/;
+		}
+		else if (storageType == "in")
+		{
+			regex = ~/in ([A-Za-z0-9]+) ([A-Za-z0-9_]+)/;
 		}
 		else
 		{
@@ -323,6 +351,21 @@ class ShaderMacro
 
 			position = regex.matchedPos();
 			lastMatch = position.pos + position.len;
+		}
+	}
+
+	private static function __processValue(meta:MetadataEntry, glVersion:String, isVertex:Bool):String
+	{
+		var source = meta.params[0].getValue();
+		var compatibility = __getBool(meta, 1, false);
+
+		if (compatibility)
+		{
+			return GLSLSourceAssembler.applyCompatibility(source, glVersion, false);
+		}
+		else
+		{
+			return source;
 		}
 	}
 }
