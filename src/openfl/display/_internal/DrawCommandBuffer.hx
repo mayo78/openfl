@@ -1,6 +1,8 @@
 package openfl.display._internal;
 
 #if !flash
+import openfl.display3D.Context3DCompareMode;
+import openfl.display3D.Context3DBlendFactor;
 import openfl.display.BitmapData;
 import openfl.display.BlendMode;
 import openfl.display.CapsStyle;
@@ -409,6 +411,17 @@ class DrawCommandBuffer
 		o.push(blendMode);
 	}
 
+	public function overrideBlendFactor(sourceColorFactor:Context3DBlendFactor, destinationColorFactor:Context3DBlendFactor, sourceAlphaFactor:Context3DBlendFactor, destinationAlphaFactor:Context3DBlendFactor)
+	{
+		prepareWrite();
+
+		types.push(OVERRIDE_BLEND_FACTOR);
+		i.push(cast sourceColorFactor);
+		i.push(cast destinationColorFactor);
+		i.push(cast sourceAlphaFactor);
+		i.push(cast destinationAlphaFactor);
+	}
+
 	public function overrideMatrix(matrix:Matrix):Void
 	{
 		prepareWrite();
@@ -429,6 +442,45 @@ class DrawCommandBuffer
 		prepareWrite();
 
 		types.push(WINDING_NON_ZERO);
+	}
+
+	public function depthTest(enable:Bool)
+	{
+		prepareWrite();
+
+		types.push(DEPTH_TEST);
+		b.push(enable);
+	}
+
+	public function depthMask(mask:Bool)
+	{
+		prepareWrite();
+
+		types.push(DEPTH_MASK);
+		b.push(mask);
+	}
+
+	public function depthCompareMode(mode:Context3DCompareMode)
+	{
+		prepareWrite();
+
+		types.push(DEPTH_COMPARE_MODE);
+		i.push(cast mode);
+	}
+
+	public function clearDepthBuffer()
+	{
+		prepareWrite();
+
+		types.push(CLEAR_DEPTH_BUFFER);
+	}
+
+	public function clearDepth(depth:Float)
+	{
+		prepareWrite();
+
+		types.push(CLEAR_DEPTH);
+		f.push(depth);
 	}
 
 	// Get & Set Methods

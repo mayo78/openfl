@@ -6,6 +6,7 @@ import openfl.display._internal.CanvasGraphics;
 import openfl.display._internal.DrawCommandReader;
 import openfl.utils._internal.Float32Array;
 import openfl.utils._internal.UInt16Array;
+import openfl.display3D.Context3DClearMask;
 import openfl.display.BitmapData;
 import openfl.display.Graphics;
 import openfl.display.OpenGLRenderer;
@@ -597,7 +598,11 @@ class Context3DGraphics
 				case MOVE_TO:
 					data.skip(type);
 
-				case OVERRIDE_BLEND_MODE:
+				case OVERRIDE_BLEND_MODE, OVERRIDE_BLEND_FACTOR:
+					data.skip(type);
+
+				// my depth friends
+				case DEPTH_TEST, DEPTH_MASK, DEPTH_COMPARE_MODE, CLEAR_DEPTH, CLEAR_DEPTH_BUFFER:
 					data.skip(type);
 
 				default:
@@ -1085,9 +1090,32 @@ class Context3DGraphics
 							positionX = c.x;
 							positionY = c.y;
 
-						case OVERRIDE_BLEND_MODE:
-							var c = data.readOverrideBlendMode();
-							renderer.__setBlendMode(c.blendMode);
+						case OVERRIDE_BLEND_FACTOR:
+							var c = data.readOverrideBlendFactor();
+							context.setBlendFactorsSeparate(c.sourceColorFactor, c.destinationColorFactor, c.sourceAlphaFactor, c.destinationAlphaFactor);
+							context.__flushGLBlend();
+						
+						case DEPTH_TEST:
+							var c = data.readDepthTest();
+							context.__setGLDepthTest(c.enable);
+
+						case DEPTH_MASK:
+							var c = data.readDepthMask();
+							context.__contextState.depthMask = c.depthMask;
+							context.__flushGLDepth();
+						
+						case DEPTH_COMPARE_MODE:
+							var c = data.readDepthCompareMode();
+							context.__contextState.depthCompareMode = c.depthCompareMode;
+							context.__flushGLDepth();
+
+						case CLEAR_DEPTH_BUFFER:
+							gl.clear(gl.DEPTH_BUFFER_BIT);
+							data.skip(type);
+
+						case CLEAR_DEPTH:
+							var c = data.readClearDepth();
+							gl.clearDepth(c.depth);
 
 						default:
 							data.skip(type);

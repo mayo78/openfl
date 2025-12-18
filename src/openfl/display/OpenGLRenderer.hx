@@ -754,7 +754,7 @@ class OpenGLRenderer extends DisplayObjectRenderer
 	{
 		__context3D.setColorMask(true, true, true, true);
 		__context3D.setCulling(NONE);
-		__context3D.setDepthTest(false, ALWAYS);
+		__context3D.setDepthTest(true, GREATER_EQUAL);
 		__context3D.setStencilActions();
 		__context3D.setStencilReferenceValue(0, 0, 0);
 		__context3D.setScissorRectangle(null);
@@ -795,8 +795,7 @@ class OpenGLRenderer extends DisplayObjectRenderer
 					__context3D.setScissorRectangle(__scissorRectangle);
 
 					__context3D.__flushGL();
-					__gl.clearColor(0, 0, 0, 1);
-					__gl.clear(__gl.COLOR_BUFFER_BIT);
+					__context3D.clear (0, 0, 0, 1, 1, 0, Context3DClearMask.COLOR | Context3DClearMask.DEPTH);
 					// __context3D.clear (0, 0, 0, 1, 0, 0, Context3DClearMask.COLOR);
 
 					// __gl.scissor (__offsetX + __displayWidth, 0, __width, __height);
@@ -804,8 +803,7 @@ class OpenGLRenderer extends DisplayObjectRenderer
 					__context3D.setScissorRectangle(__scissorRectangle);
 
 					__context3D.__flushGL();
-					__gl.clearColor(0, 0, 0, 1);
-					__gl.clear(__gl.COLOR_BUFFER_BIT);
+					__context3D.clear (0, 0, 0, 1, 1, 0, Context3DClearMask.COLOR | Context3DClearMask.DEPTH);
 					// __context3D.clear (0, 0, 0, 1, 0, 0, Context3DClearMask.COLOR);
 				}
 
@@ -816,8 +814,7 @@ class OpenGLRenderer extends DisplayObjectRenderer
 					__context3D.setScissorRectangle(__scissorRectangle);
 
 					__context3D.__flushGL();
-					__gl.clearColor(0, 0, 0, 1);
-					__gl.clear(__gl.COLOR_BUFFER_BIT);
+					__context3D.clear (0, 0, 0, 1, 1, 0, Context3DClearMask.COLOR | Context3DClearMask.DEPTH);
 					// __context3D.clear (0, 0, 0, 1, 0, 0, Context3DClearMask.COLOR);
 
 					// __gl.scissor (0, __offsetY + __displayHeight, __width, __height);
@@ -825,9 +822,7 @@ class OpenGLRenderer extends DisplayObjectRenderer
 					__context3D.setScissorRectangle(__scissorRectangle);
 
 					__context3D.__flushGL();
-					__gl.clearColor(0, 0, 0, 1);
-					__gl.clear(__gl.COLOR_BUFFER_BIT);
-					// __context3D.clear (0, 0, 0, 1, 0, 0, Context3DClearMask.COLOR);
+					__context3D.clear (0, 0, 0, 1, 1, 0, Context3DClearMask.COLOR | Context3DClearMask.DEPTH);
 				}
 
 				__context3D.setScissorRectangle(null);

@@ -1,6 +1,8 @@
 package openfl.display._internal;
 
 #if !flash
+import openfl.display3D.Context3DCompareMode;
+import openfl.display3D.Context3DBlendFactor;
 import openfl.display.BitmapData;
 import openfl.display.BlendMode;
 import openfl.display.CapsStyle;
@@ -115,11 +117,29 @@ class DrawCommandReader
 			case OVERRIDE_BLEND_MODE:
 				oPos += 1; // blendMode
 
+			case OVERRIDE_BLEND_FACTOR:
+				iPos += 4; // source color, destination color, source alpha, destination alpha
+
 			case OVERRIDE_MATRIX:
 				oPos += 1; // matrix
 
 			case WINDING_EVEN_ODD, WINDING_NON_ZERO:
 				// no parameters
+
+			case DEPTH_TEST:
+				bPos += 1; // enable
+			
+			case DEPTH_MASK:
+				bPos += 1; // mask
+
+			case DEPTH_COMPARE_MODE:
+				iPos += 1;
+
+			case CLEAR_DEPTH_BUFFER:
+				// no parameters
+
+			case CLEAR_DEPTH:
+				fPos += 1; // depth
 
 			default:
 		}
@@ -296,6 +316,13 @@ class DrawCommandReader
 		return new OverrideBlendModeView(this);
 	}
 
+	public inline function readOverrideBlendFactor():OverrideBlendFactor
+	{
+		advance();
+		prev = OVERRIDE_BLEND_FACTOR;
+		return new OverrideBlendFactor(this);
+	}
+
 	public inline function readOverrideMatrix():OverrideMatrixView
 	{
 		advance();
@@ -315,6 +342,34 @@ class DrawCommandReader
 		advance();
 		prev = WINDING_NON_ZERO;
 		return new WindingNonZeroView(this);
+	}
+
+	public inline function readDepthTest():DepthTest
+	{
+		advance();
+		prev = DEPTH_TEST;
+		return new DepthTest(this);
+	}
+
+	public inline function readDepthMask():DepthMask
+	{
+		advance();
+		prev = DEPTH_MASK;
+		return new DepthMask(this);
+	}
+
+	public inline function readDepthCompareMode():DepthCompareMode
+	{
+		advance();
+		prev = DEPTH_COMPARE_MODE;
+		return new DepthCompareMode(this);
+	}
+
+	public inline function readClearDepth():ClearDepth
+	{
+		advance();
+		prev = CLEAR_DEPTH;
+		return new ClearDepth(this);
 	}
 
 	public function reset():Void
@@ -999,6 +1054,42 @@ abstract OverrideBlendModeView(DrawCommandReader)
 	}
 }
 
+abstract OverrideBlendFactor(DrawCommandReader)
+{
+	public inline function new(d:DrawCommandReader)
+	{
+		this = d;
+	}
+
+	public var sourceColorFactor(get, never):Context3DBlendFactor;
+
+	private inline function get_sourceColorFactor():Context3DBlendFactor
+	{
+		return cast this.int(0);
+	}
+
+	public var destinationColorFactor(get, never):Context3DBlendFactor;
+
+	private inline function get_destinationColorFactor():Context3DBlendFactor
+	{
+		return cast this.int(1);
+	}
+
+	public var sourceAlphaFactor(get, never):Context3DBlendFactor;
+
+	private inline function get_sourceAlphaFactor():Context3DBlendFactor
+	{
+		return cast this.int(2);
+	}
+
+	public var destinationAlphaFactor(get, never):Context3DBlendFactor;
+
+	private inline function get_destinationAlphaFactor():Context3DBlendFactor
+	{
+		return cast this.int(3);
+	}
+}
+
 abstract OverrideMatrixView(DrawCommandReader)
 {
 	public inline function new(d:DrawCommandReader)
@@ -1027,6 +1118,66 @@ abstract WindingNonZeroView(DrawCommandReader)
 	public inline function new(d:DrawCommandReader)
 	{
 		this = d;
+	}
+}
+
+abstract DepthCompareMode(DrawCommandReader)
+{
+	public inline function new(d:DrawCommandReader)
+	{
+		this = d;
+	}
+
+	public var depthCompareMode(get, never):Context3DCompareMode;
+
+	private inline function get_depthCompareMode():Context3DCompareMode
+	{
+		return cast this.int(0);
+	}
+}
+
+abstract DepthTest(DrawCommandReader)
+{
+	public inline function new(d:DrawCommandReader)
+	{
+		this = d;
+	}
+
+	public var enable(get, never):Bool;
+
+	private inline function get_enable():Bool
+	{
+		return cast this.bool(0);
+	}
+}
+
+abstract DepthMask(DrawCommandReader)
+{
+	public inline function new(d:DrawCommandReader)
+	{
+		this = d;
+	}
+
+	public var depthMask(get, never):Bool;
+
+	private inline function get_depthMask():Bool
+	{
+		return cast this.bool(0);
+	}
+}
+
+abstract ClearDepth(DrawCommandReader)
+{
+	public inline function new(d:DrawCommandReader)
+	{
+		this = d;
+	}
+
+	public var depth(get, never):Float;
+
+	private inline function get_depth():Float
+	{
+		return cast this.float(0);
 	}
 }
 #end

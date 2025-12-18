@@ -2638,7 +2638,7 @@ import lime.math.Vector2;
 
 	@:noCompletion private function __setGLBlendEquation(value:Int):Void
 	{
-		if (#if openfl_disable_context_cache true #else __contextState.__glBlendEquation != value #end)
+		if (#if openfl_disable_cont ext_cache true #else __contextState.__glBlendEquation != value #end)
 		{
 			gl.blendEquation(value);
 			__contextState.__glBlendEquation = value;
