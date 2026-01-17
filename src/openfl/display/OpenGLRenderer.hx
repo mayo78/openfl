@@ -73,6 +73,7 @@ class OpenGLRenderer extends DisplayObjectRenderer
 	@:noCompletion private static var __staticDefaultDisplayShader:DisplayObjectShader;
 	@:noCompletion private static var __staticDefaultGraphicsShader:GraphicsShader;
 	@:noCompletion private static var __staticMaskShader:Context3DMaskShader;
+	@:noCompletion private static var __complexBlendsSupported:Null<Bool>;
 
 	@:noCompletion private var __context3D:Context3D;
 	@:noCompletion private var __clipRects:Array<Rectangle>;
@@ -139,6 +140,8 @@ class OpenGLRenderer extends DisplayObjectRenderer
 			gl.enable(ext.DEBUG_OUTPUT_SYNCHRONOUS);
 		}
 		#end
+
+		if (__complexBlendsSupported == null) __complexBlendsSupported = gl.getSupportedExtensions().contains("KHR_blend_equation_advanced");
 
 		#if (js && html5)
 		__softwareRenderer = new CanvasRenderer(null);
@@ -795,7 +798,7 @@ class OpenGLRenderer extends DisplayObjectRenderer
 					__context3D.setScissorRectangle(__scissorRectangle);
 
 					__context3D.__flushGL();
-					__context3D.clear (0, 0, 0, 1, 1, 0, Context3DClearMask.COLOR | Context3DClearMask.DEPTH);
+					__context3D.clear(0, 0, 0, 1, 1, 0, Context3DClearMask.COLOR | Context3DClearMask.DEPTH);
 					// __context3D.clear (0, 0, 0, 1, 0, 0, Context3DClearMask.COLOR);
 
 					// __gl.scissor (__offsetX + __displayWidth, 0, __width, __height);
@@ -803,7 +806,7 @@ class OpenGLRenderer extends DisplayObjectRenderer
 					__context3D.setScissorRectangle(__scissorRectangle);
 
 					__context3D.__flushGL();
-					__context3D.clear (0, 0, 0, 1, 1, 0, Context3DClearMask.COLOR | Context3DClearMask.DEPTH);
+					__context3D.clear(0, 0, 0, 1, 1, 0, Context3DClearMask.COLOR | Context3DClearMask.DEPTH);
 					// __context3D.clear (0, 0, 0, 1, 0, 0, Context3DClearMask.COLOR);
 				}
 
@@ -814,7 +817,7 @@ class OpenGLRenderer extends DisplayObjectRenderer
 					__context3D.setScissorRectangle(__scissorRectangle);
 
 					__context3D.__flushGL();
-					__context3D.clear (0, 0, 0, 1, 1, 0, Context3DClearMask.COLOR | Context3DClearMask.DEPTH);
+					__context3D.clear(0, 0, 0, 1, 1, 0, Context3DClearMask.COLOR | Context3DClearMask.DEPTH);
 					// __context3D.clear (0, 0, 0, 1, 0, 0, Context3DClearMask.COLOR);
 
 					// __gl.scissor (0, __offsetY + __displayHeight, __width, __height);
@@ -822,7 +825,7 @@ class OpenGLRenderer extends DisplayObjectRenderer
 					__context3D.setScissorRectangle(__scissorRectangle);
 
 					__context3D.__flushGL();
-					__context3D.clear (0, 0, 0, 1, 1, 0, Context3DClearMask.COLOR | Context3DClearMask.DEPTH);
+					__context3D.clear(0, 0, 0, 1, 1, 0, Context3DClearMask.COLOR | Context3DClearMask.DEPTH);
 				}
 
 				__context3D.setScissorRectangle(null);
@@ -1036,6 +1039,36 @@ class OpenGLRenderer extends DisplayObjectRenderer
 		if (__blendMode == value) return;
 
 		__blendMode = value;
+
+		if (__complexBlendsSupported)
+		{
+			var equation:Null<Int> = switch (value)
+			{
+				case MULTIPLY: 0x9294; // MULTIPLY_KHR
+				case SCREEN: 0x9295; // SCREEN_KHR
+				case OVERLAY: 0x9296; // OVERLAY_KHR
+				case DARKEN: 0x9297; // DARKEN_KHR
+				case LIGHTEN: 0x9298; // LIGHTEN_KHR
+				case HARDLIGHT: 0x929B; // HARDLIGHT_KHR
+				case DIFFERENCE: 0x929E; // DIFFERENCE_KHR
+				case COLORDODGE: 0x9299; // COLORDODGE_KHR
+				case COLORBURN: 0x929A; // COLORBURN_KHR
+				case SOFTLIGHT: 0x929C; // SOFTLIGHT_KHR
+				case EXCLUSION: 0x92A0; // EXCLUSION_KHR
+				case HUE: 0x92AD; // HSL_HUE_KHR
+				case SATURATION: 0x92AE; // HSL_SATURATION_KHR
+				case COLOR: 0x92AF; // HSL_COLOR_KHR
+				case LUMINOSITY: 0x92B0; // HSL_LUMINOSITY_KHR
+				default: null;
+			}
+
+			if (equation != null)
+			{
+				__context3D.__setGLBlendEquation(equation);
+				__context3D.__glBlendBarrier();
+				return;
+			}
+		}
 
 		switch (value)
 		{
