@@ -74,6 +74,7 @@ class OpenGLRenderer extends DisplayObjectRenderer
 	@:noCompletion private static var __staticDefaultGraphicsShader:GraphicsShader;
 	@:noCompletion private static var __staticMaskShader:Context3DMaskShader;
 	@:noCompletion private static var __complexBlendsSupported:Null<Bool>;
+	@:noCompletion private static var __coherentBlendsSupported:Null<Bool>;
 
 	@:noCompletion private var __context3D:Context3D;
 	@:noCompletion private var __clipRects:Array<Rectangle>;
@@ -141,7 +142,22 @@ class OpenGLRenderer extends DisplayObjectRenderer
 		}
 		#end
 
-		if (__complexBlendsSupported == null) __complexBlendsSupported = gl.getSupportedExtensions().contains("KHR_blend_equation_advanced");
+		if (__complexBlendsSupported == null)
+		{
+			#if desktop
+			var extensions = gl.getSupportedExtensions();
+			__complexBlendsSupported = extensions.contains("KHR_blend_equation_advanced");
+			__coherentBlendsSupported = extensions.contains("KHR_blend_equation_advanced_coherent");
+
+			// Uncomment these lines to disable coherent blending for testing (it's enabled by default if supported)
+			// __coherentBlendsSupported = false;
+			// gl.disable(0x9285);
+			#else
+			// TODO: actually make this work on android
+			__complexBlendsSupported = false;
+			__coherentBlendsSupported = false;
+			#end
+		}
 
 		#if (js && html5)
 		__softwareRenderer = new CanvasRenderer(null);
@@ -1036,12 +1052,21 @@ class OpenGLRenderer extends DisplayObjectRenderer
 	@:noCompletion private override function __setBlendMode(value:BlendMode):Void
 	{
 		if (__overrideBlendMode != null) value = __overrideBlendMode;
-		if (__blendMode == value) return;
-
+		if (__blendMode == value && !__complexBlendsSupported) return;
 		__blendMode = value;
 
 		if (__complexBlendsSupported)
 		{
+			if (!__coherentBlendsSupported)
+			{
+				// On AMD cards going back to the standard blend equations after using advanced blends resulted in
+				// invisible/black sprites so we need to reset the blend state as a workaround
+				@:privateAccess
+				var cacheBlendState = __context3D.__contextState.__enableGLBlend;
+				__context3D.__setGLBlend(false);
+				__context3D.__setGLBlend(cacheBlendState);
+			}
+
 			var equation:Null<Int> = switch (value)
 			{
 				case MULTIPLY: 0x9294; // MULTIPLY_KHR
@@ -1065,10 +1090,13 @@ class OpenGLRenderer extends DisplayObjectRenderer
 			if (equation != null)
 			{
 				__context3D.__setGLBlendEquation(equation);
-				__context3D.__glBlendBarrier();
+				// __context3D.__glBlendBarrier();
+				__context3D.__usingComplexBlend = true;
 				return;
 			}
 		}
+
+		__context3D.__usingComplexBlend = false;
 
 		switch (value)
 		{
