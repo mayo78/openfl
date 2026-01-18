@@ -1090,11 +1090,15 @@ class Context3DGraphics
 							positionX = c.x;
 							positionY = c.y;
 
+						case OVERRIDE_BLEND_MODE:
+							var c = data.readOverrideBlendMode();
+							renderer.__setBlendMode(c.blendMode);
+
 						case OVERRIDE_BLEND_FACTOR:
 							var c = data.readOverrideBlendFactor();
 							context.setBlendFactorsSeparate(c.sourceColorFactor, c.destinationColorFactor, c.sourceAlphaFactor, c.destinationAlphaFactor);
 							context.__flushGLBlend();
-						
+
 						case DEPTH_TEST:
 							var c = data.readDepthTest();
 							context.__setGLDepthTest(c.enable);
@@ -1103,7 +1107,7 @@ class Context3DGraphics
 							var c = data.readDepthMask();
 							context.__contextState.depthMask = c.depthMask;
 							context.__flushGLDepth();
-						
+
 						case DEPTH_COMPARE_MODE:
 							var c = data.readDepthCompareMode();
 							context.__contextState.depthCompareMode = c.depthCompareMode;
