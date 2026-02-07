@@ -340,7 +340,12 @@ import lime.utils.Int16Array;
 
 			if (__isValid)
 			{
-				#if lime
+				#if lime_funkin
+				__audioSource.gain = volume;
+				__audioSource.pan = pan;
+
+				return value;
+				#else
 				__audioSource.gain = volume;
 
 				var position = __audioSource.position;
@@ -415,8 +420,7 @@ import lime.utils.Int16Array;
 					else
 					{
 						__sampleDataEvent.getSamples(__outputBuffer);
-						alAudioContext.bufferData(__emptyBuffers[a], AL.FORMAT_STEREO16, __bufferView, __sampleDataEvent.getBufferSize() * 4,
-							44100);
+						alAudioContext.bufferData(__emptyBuffers[a], AL.FORMAT_STEREO16, __bufferView, __sampleDataEvent.getBufferSize() * 4, 44100);
 						alAudioContext.sourceQueueBuffer(__alSource, __emptyBuffers[a]);
 					}
 				}

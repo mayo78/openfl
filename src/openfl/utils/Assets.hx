@@ -320,23 +320,13 @@ class Assets
 
 	public static function getMusic(id:String, useCache:Bool = true):Sound
 	{
-		#if (lime_vorbis && lime > "7.9.0")
-		var path = getPath(id);
-		var vorbisFile = VorbisFile.fromFile(path);
-		if (vorbisFile != null)
+		final path = getPath(id);
+		var buffer = AudioBuffer.fromFile(path, true);
+		if (buffer == null)
 		{
-			var buffer = AudioBuffer.fromVorbisFile(vorbisFile);
-			return Sound.fromAudioBuffer(buffer);
+			throw ("Error loading sound from file: " + path);
 		}
-		else
-		{
-			// TODO: Streaming sound
-			return getSound(id, useCache);
-		}
-		#else
-		// TODO: Streaming sound
-		return getSound(id, useCache);
-		#end
+		return Sound.fromAudioBuffer(buffer);
 	}
 
 	/**
