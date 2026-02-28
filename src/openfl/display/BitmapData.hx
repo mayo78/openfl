@@ -3183,7 +3183,7 @@ class BitmapData implements IBitmapDrawable
 		image.version++;
 	}
 
-	@:noCompletion private function __drawGL(source:IBitmapDrawable, renderer:OpenGLRenderer):Void
+	@:noCompletion private function __drawGL(source:IBitmapDrawable, renderer:OpenGLRenderer, enableDepthAndStencil:Bool = true):Void
 	{
 		var context = renderer.__context3D;
 
@@ -3192,7 +3192,7 @@ class BitmapData implements IBitmapDrawable
 		var cacheRTTAntiAlias = context.__state.renderToTextureAntiAlias;
 		var cacheRTTSurfaceSelector = context.__state.renderToTextureSurfaceSelector;
 
-		context.setRenderToTexture(getTexture(context), true);
+		context.setRenderToTexture(getTexture(context), enableDepthAndStencil);
 
 		renderer.__render(source);
 
