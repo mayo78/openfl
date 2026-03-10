@@ -38,6 +38,8 @@ class DrawCommandBuffer
 
 	public function new()
 	{
+		copyOnWrite = true;
+
 		if (empty == null)
 		{
 			types = [];
@@ -48,8 +50,6 @@ class DrawCommandBuffer
 			o = [];
 			ff = [];
 			ii = [];
-
-			copyOnWrite = true;
 		}
 		else
 		{
@@ -196,6 +196,26 @@ class DrawCommandBuffer
 
 	public function clear():Void
 	{
+		#if haxe4
+		if (!copyOnWrite)
+		{
+			// if these arrays have already been copied, then we should be able
+			// to reuse them instead of creating new copies. this will result in
+			// fewer temporary objects that need to be garbage collected
+
+			types.resize(0);
+
+			b.resize(0);
+			i.resize(0);
+			f.resize(0);
+			o.resize(0);
+			ff.resize(0);
+			ii.resize(0);
+
+			return;
+		}
+		#end
+
 		types = empty.types;
 
 		b = empty.b;
