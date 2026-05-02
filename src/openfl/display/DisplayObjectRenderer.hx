@@ -437,13 +437,13 @@ class DisplayObjectRenderer extends EventDispatcher
 						displayObject.__cacheBitmapData.__fillRect(displayObject.__cacheBitmapData.rect, bitmapColor, allowFramebuffer);
 					}
 
-					if (renderer.__type == OPENGL
-						&& displayObject.__cacheBitmapData.__texture != null
-						&& __hasMaskedDescendant(displayObject)
-						&& __isOnMouseOverPath(displayObject))
-					{
-						displayObject.__cacheBitmapData.__texture = null;
-					}
+					//if (renderer.__type == OPENGL
+					//	&& displayObject.__cacheBitmapData.__texture != null
+					//	&& __hasMaskedDescendant(displayObject)
+					//	&& __isOnMouseOverPath(displayObject))
+					//{
+					//	displayObject.__cacheBitmapData.__texture = null;
+					//}
 
 					if (needsFill)
 					{
