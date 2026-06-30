@@ -489,8 +489,10 @@ class Shader
 
 		var typeName = (type == __context.gl.VERTEX_SHADER) ? "vertex" : "fragment";
 		if (isError) Log.error('Error compiling $typeName shader $message');
+		#if openfl_log_shader_info
 		else
 			Log.debug('Info compiling $typeName shader $message');
+		#end
 	}
 
 	@:noCompletion private function __createGLProgram(vertexSource:String, fragmentSource:String):GLProgram
