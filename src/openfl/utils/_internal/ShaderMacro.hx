@@ -458,6 +458,10 @@ class ShaderMacro
 
 		var attributeKeyword:EReg = ~/\battribute\s+([A-Za-z0-9_]+)\s+([A-Za-z0-9_]+)/g;
 		var varyingKeyword:EReg = ~/\bvarying\s+(?:lowp|mediump|highp\s+)?([A-Za-z0-9_]+)\s+([A-Za-z0-9_]+)/g;
+		#if (mac || ios)
+		var inKeyword:EReg = ~/\bin\s+(?:lowp|mediump|highp\s+)?([A-Za-z0-9_]+)\s+([A-Za-z0-9_]+)/g;
+		var outKeyword:EReg = ~/\bout\s+(?:lowp|mediump|highp\s+)?([A-Za-z0-9_]+)\s+([A-Za-z0-9_]+)/g;
+		#end
 		var texture2DKeyword:EReg = ~/\btexture2D\b/g;
 		var glFragColorKeyword:EReg = ~/\bgl_FragColor\b/g;
 		var glVersionCleaner:EReg = ~/\b(\d+)\s*(?:core|es|compatibility)\b/g;
@@ -482,7 +486,23 @@ class ShaderMacro
 
 				return result;
 			default:
+				#if (mac || ios)
+				// stpuid compababailty cause we love apple
+				var result = source;
+
+				if (isFragment)
+				{
+					result = inKeyword.replace(result, "varying $1 $2");
+				}
+				else
+				{
+					result = inKeyword.replace(result, "attribute $1 $2");
+					result = outKeyword.replace(result, "varying $1 $2");
+				}
+				return result;
+				#else
 				return source;
+				#end
 		}
 	}
 
